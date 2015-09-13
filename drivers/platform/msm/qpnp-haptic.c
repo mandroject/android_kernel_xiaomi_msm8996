@@ -1460,123 +1460,43 @@ static ssize_t qpnp_hap_autores_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%s\n", mode[hap->auto_res_mode]);
 }
 
-/* sysfs show function for vmax */
-static ssize_t qpnp_hap_vmax_show(struct device *dev,
+static ssize_t qpnp_hap_vmax_mv_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
 	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
-			timed_dev);
+					 timed_dev);
 
-	return snprintf(buf, PAGE_SIZE, "%u\n", hap->vmax_mv);
+	return snprintf(buf, PAGE_SIZE, "%d\n", hap->vmax_mv);
 }
 
-/* sysfs store for vmax */
-static ssize_t qpnp_hap_vmax_store(struct device *dev,
+static ssize_t qpnp_hap_vmax_mv_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
 	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
-			timed_dev);
+					 timed_dev);
+	u32 data;
+	int rc;
 
-	if (sscanf(buf, " %u", &hap->vmax_mv) != 1)
+	if (sscanf(buf, "%d", &data) != 1)
 		return -EINVAL;
-	if (!qpnp_hap_vmax_config(hap))
-		return -EIO;
-	return count;
-}
 
-/* sysfs show function for vmax_overdrive */
-static ssize_t qpnp_hap_vmax_overdrive_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
-	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
-			timed_dev);
-
-	return snprintf(buf, PAGE_SIZE, "%u\n", hap->vmax_overdrive_mv);
-}
-
-/* sysfs store for vmax */
-static ssize_t qpnp_hap_vmax_overdrive_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
-	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
-			timed_dev);
-
-	if (sscanf(buf, " %u", &hap->vmax_overdrive_mv) != 1)
-		return -EINVAL;
-	return count;
-}
-
-/* sysfs show function for vmax */
-static ssize_t qpnp_hap_vmax_overbrake_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
-	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
-			timed_dev);
-
-	return snprintf(buf, PAGE_SIZE, "%u\n", hap->vmax_overbrake_mv);
-}
-
-/* sysfs store for vmax */
-static ssize_t qpnp_hap_vmax_overbrake_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
-	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
-			timed_dev);
-
-	if (sscanf(buf, " %u", &hap->vmax_overbrake_mv) != 1)
-		return -EINVAL;
-	return count;
-}
-
-/* sysfs show function for brake_pattern */
-static ssize_t qpnp_hap_brake_pattern_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
-	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
-			timed_dev);
-
-	return snprintf(buf, PAGE_SIZE, "%u %u %u %u\n",
-			hap->brake_pat[0], hap->brake_pat[1], hap->brake_pat[2], hap->brake_pat[3]);
-}
-
-/* sysfs store for brake_pattern */
-static ssize_t qpnp_hap_brake_pattern_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct timed_output_dev *timed_dev = dev_get_drvdata(dev);
-	struct qpnp_hap *hap = container_of(timed_dev, struct qpnp_hap,
-			timed_dev);
-	int rc, i, temp;
-	u32 tmp_val[4] = {};
-	u8 reg;
-
-	rc = sscanf(buf, " %u %u %u %u", tmp_val, tmp_val+1, tmp_val+2, tmp_val+3);
-
-	if (rc != 4 || tmp_val[0] > 3 || tmp_val[1] > 3 || tmp_val[2] > 3 || tmp_val[3]  > 3) {
-		pr_info("Vibrator:illegal parameter0~3: %u,%u,%u,%u,input count=%d.This change is ethereal\n",
-				tmp_val[0], tmp_val[0], tmp_val[2], tmp_val[3], rc);
-		return -EINVAL;
-	} else {
-		for (i = QPNP_HAP_BRAKE_PAT_LEN - 1, reg = 0; i >= 0; i--) {
-			hap->brake_pat[i] = tmp_val[i] & QPNP_HAP_BRAKE_PAT_MASK;
-			temp = i << 1;
-			reg |= hap->brake_pat[i] << temp;
-		}
-		rc = qpnp_hap_write_reg(hap, &reg,
-				QPNP_HAP_BRAKE_REG(hap->base));
-		if (rc)
-			return rc;
+	if (data < QPNP_HAP_VMAX_MIN_MV) {
+		pr_err("%s: mv %d not in range (%d - %d), using min.", __func__, data, QPNP_HAP_VMAX_MIN_MV, QPNP_HAP_VMAX_MAX_MV);
+		data = QPNP_HAP_VMAX_MIN_MV;
+	} else if (data > QPNP_HAP_VMAX_MAX_MV) {
+		pr_err("%s: mv %d not in range (%d - %d), using max.", __func__, data, QPNP_HAP_VMAX_MIN_MV, QPNP_HAP_VMAX_MAX_MV);
+		data = QPNP_HAP_VMAX_MAX_MV;
 	}
-	return count;
-}
 
+	hap->vmax_mv = data;
+	rc = qpnp_hap_vmax_config(hap);
+	if (rc)
+		pr_info("qpnp: error while writing vibration control register\n");
+
+	return strnlen(buf, count);
+}
 /* sysfs attributes */
 static struct device_attribute qpnp_hap_attrs[] = {
 	__ATTR(wf_s0, (S_IRUGO | S_IWUSR | S_IWGRP),
@@ -1624,6 +1544,9 @@ static struct device_attribute qpnp_hap_attrs[] = {
 	__ATTR(min_max_test, (S_IRUGO | S_IWUSR | S_IWGRP),
 			qpnp_hap_min_max_test_data_show,
 			qpnp_hap_min_max_test_data_store),
+	__ATTR(vmax_mv, (S_IRUGO | S_IWUSR | S_IWGRP),
+			qpnp_hap_vmax_mv_show,
+			qpnp_hap_vmax_mv_store),
 	__ATTR(force_back_emf_delay, (S_IRUGO | S_IWUSR | S_IWGRP),
 			qpnp_hap_force_back_emf_delay_show,
 			qpnp_hap_force_back_emf_delay_store),
