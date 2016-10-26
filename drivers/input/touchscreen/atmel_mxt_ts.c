@@ -5696,7 +5696,7 @@ static int fb_notifier_cb(struct notifier_block *self,
 			}
 		} else if (event == FB_EARLY_EVENT_BLANK) {
 			blank = evdata->data;
-			if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL) {
+            if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL) {
 				mxt_input_enable(mxt_data->input_dev);
 			} else if (*blank == FB_BLANK_POWERDOWN) {
 				mxt_input_disable(mxt_data->input_dev);
