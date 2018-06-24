@@ -294,7 +294,6 @@ struct qpnp_hap {
 	struct qpnp_pwm_info pwm_info;
 	struct mutex lock;
 	struct mutex wf_lock;
-	struct mutex set_lock;
 	struct completion completion;
 	enum qpnp_hap_mode play_mode;
 	enum qpnp_hap_auto_res_mode auto_res_mode;
@@ -1817,8 +1816,6 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 	u8 val = 0;
 	unsigned long timeout_ns = POLL_TIME_AUTO_RES_ERR_NS;
 
-	mutex_lock(&hap->set_lock);
-
 	if (hap->play_mode == QPNP_HAP_PWM) {
 		if (on)
 			rc = pwm_enable(hap->pwm_info.pwm_dev);
@@ -1834,10 +1831,8 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 			if (hap->vmax_overdrive_mv)
 				qpnp_hap_vmax_overdrive_config(hap);
 			rc = qpnp_hap_mod_enable(hap, on);
-			if (rc < 0) {
-				mutex_unlock(&hap->set_lock);
+			if (rc < 0)
 				return rc;
-			}
 
 			rc = qpnp_hap_play(hap, on);
 
@@ -1853,10 +1848,8 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 					qpnp_hap_vmax_config(hap);
 
 				rc = qpnp_hap_auto_res_enable(hap, 1);
-				if (rc < 0) {
-					mutex_unlock(&hap->set_lock);
+				if (rc < 0)
 					return rc;
-				}
 			}
 			if (hap->correct_lra_drive_freq) {
 				/*
@@ -1879,10 +1872,8 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 			}
 
 			rc = qpnp_hap_play(hap, on);
-			if (rc < 0) {
-				mutex_unlock(&hap->set_lock);
+			if (rc < 0)
 				return rc;
-			}
 
 			if (hap->correct_lra_drive_freq) {
 				rc = qpnp_hap_read_reg(hap, &val,
@@ -1914,7 +1905,6 @@ static int qpnp_hap_set(struct qpnp_hap *hap, int on)
 		}
 	}
 
-	mutex_unlock(&hap->set_lock);
 	return rc;
 }
 
@@ -1923,7 +1913,6 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 {
 	struct qpnp_hap *hap = container_of(dev, struct qpnp_hap,
 					 timed_dev);
-	flush_work(&hap->work);
 
 	mutex_lock(&hap->lock);
 
@@ -1949,10 +1938,7 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int value)
 			      HRTIMER_MODE_REL);
 	}
 	mutex_unlock(&hap->lock);
-	if (hap->play_mode == QPNP_HAP_DIRECT)
-		qpnp_hap_set(hap, hap->state);
-	else
-		schedule_work(&hap->work);
+	schedule_work(&hap->work);
 }
 
 /* play pwm bytes */
@@ -2767,8 +2753,6 @@ static int qpnp_haptic_probe(struct spmi_device *spmi)
 
 	mutex_init(&hap->lock);
 	mutex_init(&hap->wf_lock);
-	mutex_init(&hap->set_lock);
-
 	INIT_WORK(&hap->work, qpnp_hap_worker);
 	INIT_DELAYED_WORK(&hap->sc_work, qpnp_handle_sc_irq);
 	init_completion(&hap->completion);
