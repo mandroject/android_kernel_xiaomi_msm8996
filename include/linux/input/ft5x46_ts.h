@@ -4,7 +4,7 @@
  *
  * Copyright (c) 2010  Focal tech Ltd.
  * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
- * Copyright (C) 2018 XiaoMi, Inc.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -138,7 +138,6 @@ struct ft5x46_data {
 	struct pinctrl_state *gpio_state_suspend;
 
 	int touchs;
-	int dbclick_count;
 #ifdef CONFIG_FB
 	struct notifier_block fb_notif;
 #endif

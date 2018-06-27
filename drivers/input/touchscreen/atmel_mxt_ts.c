@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Samsung Electronics Co.Ltd
  * Copyright (C) 2011 Atmel Corporation
  * Author: Joonyoung Shim <jy0922.shim@samsung.com>
- * Copyright (C) 2018 XiaoMi, Inc.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -14,6 +14,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/proc_fs.h>
 #include <linux/init.h>
 #include <linux/delay.h>
 #include <linux/firmware.h>
@@ -27,14 +28,11 @@
 #include <linux/gpio.h>
 #include <linux/string.h>
 #include <linux/of_gpio.h>
-#include <linux/hwinfo.h>
 #include <linux/power_supply.h>
 #ifdef CONFIG_FB
 #include <linux/notifier.h>
 #include <linux/fb.h>
 #endif
-#include <linux/proc_fs.h>
-#include <linux/input/touch_common_info.h>
 
 /* Version */
 #define MXT_VER_20		20
@@ -582,7 +580,6 @@
 #define MXT_INPUT_EVENT_COVER_MODE_ON		7
 #define MXT_INPUT_EVENT_END		7
 
-
 #define MXT_MAX_FINGER_NUM	16
 #define BOOTLOADER_1664_1188	1
 
@@ -731,7 +728,6 @@ struct mxt_data {
 	u8 config_info[MXT_CONFIG_INFO_SIZE];
 	u8 is_usb_plug_in;
 
-	int dbclick_count;
 	bool is_suspend;
 	struct mutex ts_lock;
 	/* Slowscan parameters	*/
@@ -1733,7 +1729,6 @@ static void mxt_proc_t93_message(struct mxt_data *data, u8 *msg)
 {
 	struct device *dev = &data->client->dev;
 	struct input_dev *input_dev = data->input_dev;
-	char ch[64] = {0x0,};
 
 	if (!input_dev)
 		return;
@@ -1747,9 +1742,6 @@ static void mxt_proc_t93_message(struct mxt_data *data, u8 *msg)
 		input_sync(input_dev);
 		input_event(input_dev, EV_KEY, KEY_WAKEUP, 0);
 		input_sync(input_dev);
-
-		data->dbclick_count++;
-		snprintf(ch, sizeof(ch), "%d", data->dbclick_count);
 	}
 }
 
@@ -1903,7 +1895,6 @@ static irqreturn_t mxt_read_messages_t44(struct mxt_data *data)
 		data->T5_msg_size + 1, data->msg_buf);
 	if (ret) {
 		dev_err(dev, "Failed to read T44 and T5 (%d)\n", ret);
-
 		return IRQ_NONE;
 	}
 
@@ -2589,7 +2580,6 @@ static int mxt_check_reg_init(struct mxt_data *data)
 	int ret;
 	const char *config_name = NULL;
 	bool is_recheck = false, use_default_cfg = false;
-	u8 *tp_maker = NULL;
 
 	if (data->firmware_updated)
 		use_default_cfg = true;
@@ -2664,25 +2654,6 @@ start:
 		}
 	}
 
-	if (data->panel_id == 0x31)
-		update_hardware_info(TYPE_TP_MAKER, 1); /* Biel D1 */
-	else if (data->panel_id == 0x36)
-		update_hardware_info(TYPE_TP_MAKER, 3); /* TPK */
-	else if (data->panel_id == 0x35)
-		update_hardware_info(TYPE_TP_MAKER, 4); /* Biel TPB */
-	else if (data->panel_id == 0x38)
-		update_hardware_info(TYPE_TP_MAKER, 5); /* Sharp */
-	else if (data->panel_id == 0x34)
-		update_hardware_info(TYPE_TP_MAKER, 6); /* Ofilm */
-
-	tp_maker = kzalloc(20, GFP_KERNEL);
-	if (tp_maker == NULL)
-		dev_err(dev, "fail to alloc vendor name memory\n");
-	else {
-		strlcpy(tp_maker, update_hw_component_touch_module_info(data->lockdown_info[0]), 20);
-		kfree(tp_maker);
-		tp_maker = NULL;
-	}
 	config_name = mxt_get_config(data, use_default_cfg);
 
 	if (data->config_info[0] >= 0x65) {
@@ -3031,18 +3002,6 @@ static int mxt_configure_regulator(struct mxt_data *data, bool enabled)
 		goto err_null_regulator_vddio;
 	}
 
-#if 0
-	if (regulator_count_voltages(data->regulator_vddio) > 1) {
-		ret = regulator_set_voltage(data->regulator_vddio,
-				MXT_VDDIO_MIN_UV, MXT_VDDIO_MAX_UV);
-		if (ret < 0) {
-			dev_err(&client->dev,
-				"regulator_set_voltage for vddio failed: %d\n", ret);
-			return ret;
-		}
-	}
-#endif
-
 	ret = regulator_enable(data->regulator_vddio);
 	if (ret < 0) {
 		dev_err(&client->dev,
@@ -3144,7 +3103,7 @@ static int mxt_do_self_tune(struct mxt_data *data, u8 cmd)
 
 	error = mxt_wait_for_self_tune_msg(data, cmd);
 
-	if(!error) {
+	if (!error) {
 		if (data->selfcap_status.error_code != 0)
 			return -EINVAL;
 	}
@@ -3432,7 +3391,7 @@ static int mxt_load_fw(struct device *dev, const char *fn)
 		return ret;
 	}
 
-	buffer = kmalloc(fw->size , GFP_KERNEL);
+	buffer = kmalloc(fw->size, GFP_KERNEL);
 	if (!buffer) {
 		dev_err(dev, "malloc firmware buffer failed!\n");
 		return -ENOMEM;
@@ -5040,7 +4999,6 @@ static void mxt_switch_mode_work(struct work_struct *work)
 	const struct mxt_platform_data *pdata = data->pdata;
 	int index = data->current_index;
 	u8 value = ms->mode;
-	char ch[16] = {0x0,};
 
 	if (value == MXT_INPUT_EVENT_STYLUS_MODE_ON ||
 				value == MXT_INPUT_EVENT_STYLUS_MODE_OFF)
@@ -5049,9 +5007,6 @@ static void mxt_switch_mode_work(struct work_struct *work)
 				value == MXT_INPUT_EVENT_WAKUP_MODE_OFF) {
 		if (pdata->config_array[index].wake_up_self_adcx != 0) {
 			mxt_set_wakeup_mode(data, value - MXT_INPUT_EVENT_WAKUP_MODE_OFF);
-
-			snprintf(ch, sizeof(ch), "%s", (value - MXT_INPUT_EVENT_WAKUP_MODE_OFF) ? "enabled" : "disabled");
-
 		}
 	} else if (value == MXT_INPUT_EVENT_COVER_MODE_ON ||
 				value == MXT_INPUT_EVENT_COVER_MODE_OFF)
@@ -5794,7 +5749,7 @@ static int fb_notifier_cb(struct notifier_block *self,
 			}
 		} else if (event == FB_EARLY_EVENT_BLANK) {
 			blank = evdata->data;
-            if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL) {
+			if (*blank == FB_BLANK_UNBLANK || *blank == FB_BLANK_NORMAL) {
 				mxt_input_enable(mxt_data->input_dev);
 			} else if (*blank == FB_BLANK_POWERDOWN) {
 				mxt_input_disable(mxt_data->input_dev);
@@ -6888,6 +6843,8 @@ static int mxt_probe(struct i2c_client *client,
 		goto err_free_irq;
 	}
 
+	mxt_proc_init(client->dev.kobj.sd);
+
 	sysfs_bin_attr_init(&data->mem_access_attr);
 	data->mem_access_attr.attr.name = "mem_access";
 	data->mem_access_attr.attr.mode = S_IRUGO | S_IWUSR;
@@ -6916,13 +6873,9 @@ static int mxt_probe(struct i2c_client *client,
 
 	normal_mode_reg_save(data);
 
-	update_hardware_info(TYPE_TOUCH, 2);
-
 	data->finish_init = 1;
 
 	proc_create("tp_selftest", 0, NULL, &mxt_selftest_ops);
-
-	data->dbclick_count = 0;
 
 	return 0;
 
