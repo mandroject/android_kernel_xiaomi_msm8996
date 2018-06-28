@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2012 Alexandra Chin <alexandra.chin@tw.synaptics.com>
  * Copyright (C) 2012 Scott Lin <scott.lin@tw.synaptics.com>
- * Copyright (C) 2018 XiaoMi, Inc.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * INFORMATION CONTAINED IN THIS DOCUMENT IS PROVIDED "AS-IS," AND SYNAPTICS
