@@ -90,4 +90,8 @@ obj-$(CONFIG_TOUCHSCREEN_ZFORCE)	+= zforce_ts.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4)		+= synaptics_i2c_rmi4.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI4_DEV)	+= synaptics_rmi_dev.o
 obj-$(CONFIG_TOUCHSCREEN_GT9XX)		+= gt9xx/
+<<<<<<< HEAD
 obj-$(CONFIG_TOUCHSCREEN_FT5X46)        += ft5x46/
+=======
+obj-$(CONFIG_TOUCHSCREEN_HIMAX_CHIPSET)	+= hxchipset/
+>>>>>>> LA.UM.6.5.r1-08900-8x96.0
