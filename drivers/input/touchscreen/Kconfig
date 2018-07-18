@@ -1135,9 +1135,8 @@ config TOUCHSCREEN_MAXIM_STI
 
 source "drivers/input/touchscreen/gt9xx/Kconfig"
 
-<<<<<<< HEAD
 source "drivers/input/touchscreen/ft5x46/Kconfig"
-=======
+
 config TOUCHSCREEN_HIMAX_CHIPSET
 	bool "Himax touchpanel CHIPSET"
 	depends on I2C
@@ -1149,6 +1148,5 @@ config TOUCHSCREEN_HIMAX_CHIPSET
 	  If unsure, say N.
 
 source "drivers/input/touchscreen/hxchipset/Kconfig"
->>>>>>> LA.UM.6.5.r1-08900-8x96.0
 
 endif
