@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1427,11 +1428,16 @@ static int32_t msm_cci_init(struct v4l2_subdev *sd,
 	cci_dev->payload_size =
 			MSM_CCI_WRITE_DATA_PAYLOAD_SIZE_10;
 	cci_dev->support_seq_write = 0;
+#if 0
+	/* Disable the burst mode since the cci issue. */
 	if (cci_dev->hw_version >= 0x10020000) {
 		cci_dev->payload_size =
 			MSM_CCI_WRITE_DATA_PAYLOAD_SIZE_11;
 		cci_dev->support_seq_write = 1;
 	}
+
+#endif
+
 	for (i = 0; i < NUM_MASTERS; i++) {
 		for (j = 0; j < NUM_QUEUES; j++) {
 			if (j == QUEUE_0) {
